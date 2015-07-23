@@ -92,11 +92,15 @@ QUnit.test 'treeify', (assert) ->
 				children: [
 					{
 						text: 'hello'
+						start_index: 0
+						end_index: 5
 					}
 				]
 			}
 			{
 				text: ' '
+				start_index: 5
+				end_index: 6
 			}
 			{
 				start_index: 6
@@ -105,6 +109,8 @@ QUnit.test 'treeify', (assert) ->
 				children: [
 					{
 						text: 'world'
+						start_index: 6
+						end_index: 11
 					}
 				]
 			}
@@ -127,6 +133,8 @@ QUnit.test 'treeify nesting', (assert) ->
 		children: [
 			{
 				text: 'hel'
+				start_index: 0
+				end_index: 3
 			}
 			{
 				start_index: 3
@@ -135,6 +143,8 @@ QUnit.test 'treeify nesting', (assert) ->
 				children: [
 					{
 						text: 'lo'
+						start_index: 3
+						end_index: 5
 					}
 					{
 						start_index: 5
@@ -142,17 +152,23 @@ QUnit.test 'treeify nesting', (assert) ->
 						attribute: 'italic'
 						children: [
 							{
+								start_index: 5
+								end_index: 7
 								text: 'wo'
 							}
 						]
 					}
 					{
 						text: 'r'
+						start_index: 7
+						end_index: 8
 					}
 				]
 			}
 			{
 				text: 'ld'
+				start_index: 8
+				end_index: 10
 			}
 		]
 
@@ -181,6 +197,8 @@ QUnit.test 'treeify same index', (assert) ->
 		children: [
 			{
 				text: '1'
+				start_index: 0
+				end_index: 1
 			}
 			{
 				start_index: 1
@@ -189,6 +207,8 @@ QUnit.test 'treeify same index', (assert) ->
 				children: [
 					{
 						text: '2'
+						start_index: 1
+						end_index: 2
 					}
 					{
 						start_index: 2
@@ -197,6 +217,8 @@ QUnit.test 'treeify same index', (assert) ->
 						children: [
 							{
 								text: '3'
+								start_index: 2
+								end_index: 3
 							}
 							{
 								start_index: 3
@@ -205,6 +227,8 @@ QUnit.test 'treeify same index', (assert) ->
 								children: [
 									{
 										text: '4'
+										start_index: 3
+										end_index: 4
 									}
 								]
 							}
@@ -224,6 +248,8 @@ QUnit.test 'treeify same index', (assert) ->
 						children: [
 							{
 								text: '5'
+								start_index: 4
+								end_index: 5
 							}
 						]
 					}
@@ -236,11 +262,15 @@ QUnit.test 'treeify same index', (assert) ->
 				children: [
 					{
 						text: '6'
+						start_index: 5
+						end_index: 6
 					}
 				]
 			}
 			{
 				text: '7'
+				start_index: 6
+				end_index: 7
 			}
 		]
 	assert.deepEqual (markedTextToTree normalized_markers, text), tree

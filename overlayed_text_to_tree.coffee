@@ -67,7 +67,34 @@ window.normalizeMarkers = (markers) ->
 					index: marker.index
 	result
 
-window.markedTextToTree = (markers, full_text) ->
+addSingleText = (parent_tag, full_text, start_index, end_index) ->
+	text = full_text[start_index...end_index]
+	if text
+		parent_tag.children.push {text, start_index, end_index}
+
+addCursor = (parent_tag, cursor_index) ->
+	parent_tag.children.push
+		attribute: 'cursor'
+		start_index: cursor_index
+		end_index: cursor_index
+		children: []
+
+addCursorText = (parent_tag, full_text, start_index, end_index, cursor_index) ->
+	"""The cursor should be placed inside the formatting for the character on its
+	left, if possible.  Since the first character in the document has no character to
+	its left, we will use the character on its right instead"""
+	if cursor_index is 0 and start_index is 0
+		addCursor parent_tag
+		addSingleText parent_tag, full_text, start_index, end_index
+	else if start_index < cursor_index <= end_index
+		addSingleText parent_tag, full_text, start_index, cursor_index
+		addCursor parent_tag
+		addSingleText parent_tag, full_text, cursor_index, end_index
+	else
+		addSingleText parent_tag, full_text, start_index, end_index
+
+
+window.markedTextToTree = (markers, full_text, cursor_index) ->
 	"""Converts a list of markers into a tree representation that mirrors the
 	final HTML, and splits up the text into the resulting elements"""
 	current_tag =
@@ -80,11 +107,7 @@ window.markedTextToTree = (markers, full_text) ->
 	for marker in markers
 		if marker.type is 'start'
 			parent_tag = current_tag
-
-			# add preceeding text to parent element
-			text = full_text[last_index...marker.index]
-			if text
-				parent_tag.children.push {text}
+			addCursorText parent_tag, full_text, last_index, marker.index, cursor_index
 			last_index = marker.index
 
 			# start a tag
@@ -97,26 +120,23 @@ window.markedTextToTree = (markers, full_text) ->
 			context.push current_tag
 
 		else if marker.type is 'end'
-			# add preceeding text to the current element
-			text = full_text[last_index...marker.index]
-			if text
-				current_tag.children.push {text}
+			addCursorText current_tag, full_text, last_index, marker.index, cursor_index
 			last_index = marker.index
+
+			# end the tag
 			current_tag.end_index = marker.index
 
 			# go up a level
 			context.pop()
 			current_tag = last context
 
-	text = full_text[last_index...]
-	if text
-		current_tag.children.push {text}
+	addCursorText current_tag, full_text, last_index, full_text.length, cursor_index
 
 	return current_tag
 
-window.overlayedTextToTree = (overlays, text) ->
+window.overlayedTextToTree = (overlays, text, cursor) ->
 	"""Converts overlays to an html-like tree"""
 	markers = overlaysToMarkers overlays
 	normalized_markers = normalizeMarkers markers
-	tree = markedTextToTree normalized_markers, text
+	tree = markedTextToTree normalized_markers, text, cursor
 	return tree

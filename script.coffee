@@ -4,6 +4,7 @@ window.Editor = React.createClass
 
 		text: text
 		cursor: text.length
+		selection_end: null
 		overlays: [
 			{attribute:'bold', start:0, end: 3}
 			{attribute:'italic', start:6, end: 11}
@@ -14,11 +15,15 @@ window.Editor = React.createClass
 			bold: 'b'
 			italic: 'i'
 			container: 'div'
+			cursor: 'cursor'
 		return simple_elements[attribute]
 
 	renderTree: (node) ->
 		if node.text?
-			return node.text
+			return React.createElement 'span', 
+				'data-start-index': node.start_index
+				'data-end-index': node.end_index
+			, node.text
 		tag = @attributeToTag node.attribute
 		React.createElement tag,
 			'data-start-index': node.start_index
@@ -31,15 +36,7 @@ window.Editor = React.createClass
 
 	getAnchorIndex: (anchor, offset) ->
 		if anchor.nodeType is anchor.TEXT_NODE
-			parent_node = anchor.parentNode.parentNode
-			parent_index = parseInt parent_node.attributes['data-start-index'].value
-			
-			previous_sibling = anchor.parentNode.previousSibling
-			previous_sibling_index = if previous_sibling?
-				parseInt previous_sibling.attributes['data-end-index'].value
-			else 0
-
-			previous_sibling_index + parent_index + offset
+			(parseInt anchor.parentNode.attributes['data-start-index'].value) + offset
 		else
 			console.log "TODO: handle non-text clicks"
 
@@ -67,9 +64,32 @@ window.Editor = React.createClass
 		console.log "insert character", character, @state.cursor, @state.selection_end
 
 	onKeyDown: (event) ->
-		if event.keyCode is 8
+		if event.keyCode is KEYCODES.backspace
 			event.preventDefault()
 			console.log 'backspace', @state.cursor, @state.selection_end
+		else if event.keyCode is KEYCODES.left
+			if event.shiftKey
+				if not @state.selection_end
+					@setState selection_end: @state.cursor					
+				if @state.cursor > 0
+					@setState cursor: @state.cursor - 1
+			else
+				if @state.selection_end
+					@setState selection_end: null
+				else if @state.cursor > 0
+					@setState cursor: @state.cursor - 1
+		else if event.keyCode is KEYCODES.right
+			if event.shiftKey
+				selection_end = @state.selection_end or @state.cursor
+				if selection_end < @state.text.length
+					@setState selection_end: selection_end + 1
+			else
+				if @state.selection_end
+					@setState
+						cursor: @state.selection_end
+						selection_end: null
+				else if @state.cursor < @state.text.length
+					@setState cursor: @state.cursor + 1
 
 	onPaste: (event) ->
 		data = event.clipboardData
@@ -77,7 +97,7 @@ window.Editor = React.createClass
 		console.log "insert characters", characters, @state.cursor, @state.selection_end
 
 	render: ->
-		tree = overlayedTextToTree @state.overlays, @state.text
+		tree = overlayedTextToTree @state.overlays, @state.text, @state.cursor
 		children = @renderTreeList tree.children
 		React.createElement 'div',
 			'data-start-index': 0
@@ -88,7 +108,17 @@ window.Editor = React.createClass
 			onPaste: @onPaste
 			tabIndex: 1
 		, children
-React.render <Editor/>, document.getElementById('main')
+
+KEYCODES =
+	left: 37
+	up: 38
+	right: 39
+	down: 40
+	backspace: 8
 
 top = (stack) -> stack[stack.length-1]
+
+window.gapi.load 'auth:client,drive-realtime,drive-share', ->
+	doc = gapi.drive.realtime.newInMemoryDocument()
+	React.render <Editor doc={doc}/>, document.getElementById('main')
 

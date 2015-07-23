@@ -261,18 +261,24 @@
           attribute: 'bold',
           children: [
             {
-              text: 'hello'
+              text: 'hello',
+              start_index: 0,
+              end_index: 5
             }
           ]
         }, {
-          text: ' '
+          text: ' ',
+          start_index: 5,
+          end_index: 6
         }, {
           start_index: 6,
           end_index: 11,
           attribute: 'italic',
           children: [
             {
-              text: 'world'
+              text: 'world',
+              start_index: 6,
+              end_index: 11
             }
           ]
         }
@@ -309,29 +315,39 @@
       attribute: 'container',
       children: [
         {
-          text: 'hel'
+          text: 'hel',
+          start_index: 0,
+          end_index: 3
         }, {
           start_index: 3,
           end_index: 8,
           attribute: 'bold',
           children: [
             {
-              text: 'lo'
+              text: 'lo',
+              start_index: 3,
+              end_index: 5
             }, {
               start_index: 5,
               end_index: 7,
               attribute: 'italic',
               children: [
                 {
+                  start_index: 5,
+                  end_index: 7,
                   text: 'wo'
                 }
               ]
             }, {
-              text: 'r'
+              text: 'r',
+              start_index: 7,
+              end_index: 8
             }
           ]
         }, {
-          text: 'ld'
+          text: 'ld',
+          start_index: 8,
+          end_index: 10
         }
       ]
     };
@@ -398,28 +414,36 @@
       attribute: 'container',
       children: [
         {
-          text: '1'
+          text: '1',
+          start_index: 0,
+          end_index: 1
         }, {
           start_index: 1,
           end_index: 4,
           attribute: 'bold',
           children: [
             {
-              text: '2'
+              text: '2',
+              start_index: 1,
+              end_index: 2
             }, {
               start_index: 2,
               end_index: 4,
               attribute: 'strike',
               children: [
                 {
-                  text: '3'
+                  text: '3',
+                  start_index: 2,
+                  end_index: 3
                 }, {
                   start_index: 3,
                   end_index: 4,
                   attribute: 'italic',
                   children: [
                     {
-                      text: '4'
+                      text: '4',
+                      start_index: 3,
+                      end_index: 4
                     }
                   ]
                 }
@@ -437,7 +461,9 @@
               attribute: 'italic',
               children: [
                 {
-                  text: '5'
+                  text: '5',
+                  start_index: 4,
+                  end_index: 5
                 }
               ]
             }
@@ -448,11 +474,15 @@
           attribute: 'italic',
           children: [
             {
-              text: '6'
+              text: '6',
+              start_index: 5,
+              end_index: 6
             }
           ]
         }, {
-          text: '7'
+          text: '7',
+          start_index: 6,
+          end_index: 7
         }
       ]
     };
