@@ -1,6 +1,9 @@
 window.Editor = React.createClass
 	getInitialState: ->
-		text: "hello world"
+		text = "hello world"
+
+		text: text
+		cursor: text.length
 		overlays: [
 			{attribute:'bold', start:0, end: 3}
 			{attribute:'italic', start:6, end: 11}
@@ -44,12 +47,25 @@ window.Editor = React.createClass
 				previous_sibling_index + parent_index + local_index
 			else
 				console.log "TODO: handle non-text clicks"
-				debugger
 
-			console.log index
+			@setState cursor: index
 		else
 			console.log "TODO: handle selections"
-			debugger
+
+	onKeypress: (event) ->
+		event.preventDefault()
+		character = String.fromCharCode event.which
+		console.log "insert character", character, @state.cursor
+
+	onKeyDown: (event) ->
+		if event.keyCode is 8
+			event.preventDefault()
+			console.log 'backspace', @state.cursor
+
+	onPaste: (event) ->
+		data = event.clipboardData
+		characters = data.getData data.types[0]
+		console.log "insert characters", characters, @state.cursor
 
 	render: ->
 		tree = overlayedTextToTree @state.overlays, @state.text
@@ -58,7 +74,12 @@ window.Editor = React.createClass
 			'data-start-index': 0
 			'data-end-index': @state.text.length
 			onClick: @onClick
+			onKeyPress: @onKeypress
+			onKeyDown: @onKeyDown
+			onPaste: @onPaste
+			tabIndex: 1
 		, children
 React.render <Editor/>, document.getElementById('main')
 
 top = (stack) -> stack[stack.length-1]
+

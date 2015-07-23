@@ -4,8 +4,11 @@
 
   window.Editor = React.createClass({
     getInitialState: function() {
+      var text;
+      text = "hello world";
       return {
-        text: "hello world",
+        text: text,
+        cursor: text.length,
         overlays: [
           {
             attribute: 'bold',
@@ -53,24 +56,31 @@
       selection = window.getSelection();
       if (selection.isCollapsed) {
         anchor = selection.anchorNode;
-        index = (function() {
-          if (anchor.nodeType === anchor.TEXT_NODE) {
-            parent_node = anchor.parentNode.parentNode;
-            parent_index = parseInt(parent_node.attributes['data-start-index'].value);
-            previous_sibling = anchor.parentNode.previousSibling;
-            previous_sibling_index = previous_sibling != null ? parseInt(previous_sibling.attributes['data-end-index'].value) : 0;
-            local_index = selection.anchorOffset;
-            return previous_sibling_index + parent_index + local_index;
-          } else {
-            console.log("TODO: handle non-text clicks");
-            debugger;
-          }
-        })();
-        return console.log(index);
+        index = anchor.nodeType === anchor.TEXT_NODE ? (parent_node = anchor.parentNode.parentNode, parent_index = parseInt(parent_node.attributes['data-start-index'].value), previous_sibling = anchor.parentNode.previousSibling, previous_sibling_index = previous_sibling != null ? parseInt(previous_sibling.attributes['data-end-index'].value) : 0, local_index = selection.anchorOffset, previous_sibling_index + parent_index + local_index) : console.log("TODO: handle non-text clicks");
+        return this.setState({
+          cursor: index
+        });
       } else {
-        console.log("TODO: handle selections");
-        debugger;
+        return console.log("TODO: handle selections");
       }
+    },
+    onKeypress: function(event) {
+      var character;
+      event.preventDefault();
+      character = String.fromCharCode(event.which);
+      return console.log("insert character", character, this.state.cursor);
+    },
+    onKeyDown: function(event) {
+      if (event.keyCode === 8) {
+        event.preventDefault();
+        return console.log('backspace', this.state.cursor);
+      }
+    },
+    onPaste: function(event) {
+      var characters, data;
+      data = event.clipboardData;
+      characters = data.getData(data.types[0]);
+      return console.log("insert characters", characters, this.state.cursor);
     },
     render: function() {
       var children, tree;
@@ -79,7 +89,11 @@
       return React.createElement('div', {
         'data-start-index': 0,
         'data-end-index': this.state.text.length,
-        onClick: this.onClick
+        onClick: this.onClick,
+        onKeyPress: this.onKeypress,
+        onKeyDown: this.onKeyDown,
+        onPaste: this.onPaste,
+        tabIndex: 1
       }, children);
     }
   });
