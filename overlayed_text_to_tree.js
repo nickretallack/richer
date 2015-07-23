@@ -93,7 +93,8 @@
     var context, current_tag, i, last_index, len, marker, parent_tag, text;
     current_tag = {
       attribute: 'container',
-      index: 0,
+      start_index: 0,
+      end_index: full_text.length,
       children: []
     };
     context = [current_tag];
@@ -111,7 +112,7 @@
         last_index = marker.index;
         current_tag = {
           attribute: marker.attribute,
-          index: marker.index,
+          start_index: marker.index,
           children: []
         };
         parent_tag.children.push(current_tag);
@@ -124,6 +125,7 @@
           });
         }
         last_index = marker.index;
+        current_tag.end_index = marker.index;
         context.pop();
         current_tag = last(context);
       }

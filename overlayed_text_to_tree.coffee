@@ -72,7 +72,8 @@ window.markedTextToTree = (markers, full_text) ->
 	final HTML, and splits up the text into the resulting elements"""
 	current_tag =
 		attribute: 'container'
-		index: 0
+		start_index: 0
+		end_index: full_text.length
 		children: []
 	context = [current_tag]
 	last_index = 0
@@ -89,7 +90,7 @@ window.markedTextToTree = (markers, full_text) ->
 			# start a tag
 			current_tag =
 				attribute: marker.attribute
-				index: marker.index
+				start_index: marker.index
 				children: []
 
 			parent_tag.children.push current_tag
@@ -101,6 +102,7 @@ window.markedTextToTree = (markers, full_text) ->
 			if text
 				current_tag.children.push {text}
 			last_index = marker.index
+			current_tag.end_index = marker.index
 
 			# go up a level
 			context.pop()

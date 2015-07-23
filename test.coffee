@@ -81,11 +81,13 @@ QUnit.test 'treeify', (assert) ->
 		{attribute:'italic', type:'end', index:11}
 	]
 	tree =
-		index: 0
+		start_index: 0
+		end_index: 11
 		attribute: 'container'
 		children: [
 			{
-				index: 0
+				start_index: 0
+				end_index: 5
 				attribute: 'bold'
 				children: [
 					{
@@ -97,7 +99,8 @@ QUnit.test 'treeify', (assert) ->
 				text: ' '
 			}
 			{
-				index: 6
+				start_index: 6
+				end_index: 11
 				attribute: 'italic'
 				children: [
 					{
@@ -118,21 +121,24 @@ QUnit.test 'treeify nesting', (assert) ->
 		{attribute:'bold', type:'end', index:8}
 	]
 	tree =
-		index: 0
+		start_index: 0
+		end_index: 10
 		attribute: 'container'
 		children: [
 			{
 				text: 'hel'
 			}
 			{
-				index: 3
+				start_index: 3
+				end_index: 8
 				attribute: 'bold'
 				children: [
 					{
 						text: 'lo'
 					}
 					{
-						index: 5
+						start_index: 5
+						end_index: 7
 						attribute: 'italic'
 						children: [
 							{
@@ -169,28 +175,32 @@ QUnit.test 'treeify same index', (assert) ->
 		{attribute:'italic', type:'end', index:6}
 	]
 	tree =
-		index: 0
+		start_index: 0
+		end_index: 7
 		attribute: 'container'
 		children: [
 			{
 				text: '1'
 			}
 			{
-				index: 1
+				start_index: 1
+				end_index: 4
 				attribute: 'bold'
 				children: [
 					{
 						text: '2'
 					}
 					{
-						index: 2
+						start_index: 2
+						end_index: 4
 						attribute: 'strike'
 						children: [
 							{
 								text: '3'
 							}
 							{
-								index: 3
+								start_index: 3
+								end_index: 4
 								attribute: 'italic'
 								children: [
 									{
@@ -203,11 +213,13 @@ QUnit.test 'treeify same index', (assert) ->
 				]
 			}
 			{
-				index: 4
+				start_index: 4
+				end_index: 5
 				attribute: 'strike'
 				children: [
 					{
-						index: 4
+						start_index: 4
+						end_index: 5
 						attribute: 'italic'
 						children: [
 							{
@@ -218,7 +230,8 @@ QUnit.test 'treeify same index', (assert) ->
 				]
 			}
 			{
-				index: 5
+				start_index: 5
+				end_index: 6
 				attribute: 'italic'
 				children: [
 					{

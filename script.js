@@ -10,7 +10,7 @@
           {
             attribute: 'bold',
             start: 0,
-            end: 5
+            end: 3
           }, {
             attribute: 'italic',
             start: 6,
@@ -34,7 +34,10 @@
         return node.text;
       }
       tag = this.attributeToTag(node.attribute);
-      return React.createElement(tag, null, this.renderTreeList(node.children));
+      return React.createElement(tag, {
+        'data-start-index': node.start_index,
+        'data-end-index': node.end_index
+      }, this.renderTreeList(node.children));
     },
     renderTreeList: function(nodes) {
       var i, len, node, results;
@@ -45,8 +48,39 @@
       }
       return results;
     },
+    onClick: function(event) {
+      var anchor, index, local_index, parent_index, parent_node, previous_sibling, previous_sibling_index, selection;
+      selection = window.getSelection();
+      if (selection.isCollapsed) {
+        anchor = selection.anchorNode;
+        index = (function() {
+          if (anchor.nodeType === anchor.TEXT_NODE) {
+            parent_node = anchor.parentNode.parentNode;
+            parent_index = parseInt(parent_node.attributes['data-start-index'].value);
+            previous_sibling = anchor.parentNode.previousSibling;
+            previous_sibling_index = previous_sibling != null ? parseInt(previous_sibling.attributes['data-end-index'].value) : 0;
+            local_index = selection.anchorOffset;
+            return previous_sibling_index + parent_index + local_index;
+          } else {
+            console.log("TODO: handle non-text clicks");
+            debugger;
+          }
+        })();
+        return console.log(index);
+      } else {
+        console.log("TODO: handle selections");
+        debugger;
+      }
+    },
     render: function() {
-      return this.renderTree(overlayedTextToTree(this.state.overlays, this.state.text));
+      var children, tree;
+      tree = overlayedTextToTree(this.state.overlays, this.state.text);
+      children = this.renderTreeList(tree.children);
+      return React.createElement('div', {
+        'data-start-index': 0,
+        'data-end-index': this.state.text.length,
+        onClick: this.onClick
+      }, children);
     }
   });
 
