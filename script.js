@@ -51,36 +51,58 @@
       }
       return results;
     },
+    getAnchorIndex: function(anchor, offset) {
+      var parent_index, parent_node, previous_sibling, previous_sibling_index;
+      if (anchor.nodeType === anchor.TEXT_NODE) {
+        parent_node = anchor.parentNode.parentNode;
+        parent_index = parseInt(parent_node.attributes['data-start-index'].value);
+        previous_sibling = anchor.parentNode.previousSibling;
+        previous_sibling_index = previous_sibling != null ? parseInt(previous_sibling.attributes['data-end-index'].value) : 0;
+        return previous_sibling_index + parent_index + offset;
+      } else {
+        return console.log("TODO: handle non-text clicks");
+      }
+    },
     onClick: function(event) {
-      var anchor, index, local_index, parent_index, parent_node, previous_sibling, previous_sibling_index, selection;
+      var cursor, index1, index2, selection, selection_end;
       selection = window.getSelection();
       if (selection.isCollapsed) {
-        anchor = selection.anchorNode;
-        index = anchor.nodeType === anchor.TEXT_NODE ? (parent_node = anchor.parentNode.parentNode, parent_index = parseInt(parent_node.attributes['data-start-index'].value), previous_sibling = anchor.parentNode.previousSibling, previous_sibling_index = previous_sibling != null ? parseInt(previous_sibling.attributes['data-end-index'].value) : 0, local_index = selection.anchorOffset, previous_sibling_index + parent_index + local_index) : console.log("TODO: handle non-text clicks");
-        return this.setState({
-          cursor: index
-        });
+        cursor = this.getAnchorIndex(selection.anchorNode, selection.anchorOffset);
+        selection_end = null;
       } else {
-        return console.log("TODO: handle selections");
+        index1 = this.getAnchorIndex(selection.anchorNode, selection.anchorOffset);
+        index2 = this.getAnchorIndex(selection.focusNode, selection.focusOffset);
+        if (index1 < index2) {
+          cursor = index1;
+          selection_end = index2;
+        } else {
+          cursor = index2;
+          selection_end = index1;
+        }
       }
+      console.log("set selection", cursor, selection_end);
+      return this.setState({
+        cursor: cursor,
+        selection_end: selection_end
+      });
     },
     onKeypress: function(event) {
       var character;
       event.preventDefault();
       character = String.fromCharCode(event.which);
-      return console.log("insert character", character, this.state.cursor);
+      return console.log("insert character", character, this.state.cursor, this.state.selection_end);
     },
     onKeyDown: function(event) {
       if (event.keyCode === 8) {
         event.preventDefault();
-        return console.log('backspace', this.state.cursor);
+        return console.log('backspace', this.state.cursor, this.state.selection_end);
       }
     },
     onPaste: function(event) {
       var characters, data;
       data = event.clipboardData;
       characters = data.getData(data.types[0]);
-      return console.log("insert characters", characters, this.state.cursor);
+      return console.log("insert characters", characters, this.state.cursor, this.state.selection_end);
     },
     render: function() {
       var children, tree;

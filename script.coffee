@@ -29,43 +29,52 @@ window.Editor = React.createClass
 		for node in nodes
 			@renderTree node
 
+	getAnchorIndex: (anchor, offset) ->
+		if anchor.nodeType is anchor.TEXT_NODE
+			parent_node = anchor.parentNode.parentNode
+			parent_index = parseInt parent_node.attributes['data-start-index'].value
+			
+			previous_sibling = anchor.parentNode.previousSibling
+			previous_sibling_index = if previous_sibling?
+				parseInt previous_sibling.attributes['data-end-index'].value
+			else 0
+
+			previous_sibling_index + parent_index + offset
+		else
+			console.log "TODO: handle non-text clicks"
+
 	onClick: (event) ->
 		selection = window.getSelection()
 		if selection.isCollapsed
-			anchor = selection.anchorNode
-			index = if anchor.nodeType is anchor.TEXT_NODE
-				parent_node = anchor.parentNode.parentNode
-				parent_index = parseInt parent_node.attributes['data-start-index'].value
-				
-				previous_sibling = anchor.parentNode.previousSibling
-				previous_sibling_index = if previous_sibling?
-					parseInt previous_sibling.attributes['data-end-index'].value
-				else 0
-
-				local_index = selection.anchorOffset
-
-				previous_sibling_index + parent_index + local_index
-			else
-				console.log "TODO: handle non-text clicks"
-
-			@setState cursor: index
+			cursor = @getAnchorIndex selection.anchorNode, selection.anchorOffset
+			selection_end = null
 		else
-			console.log "TODO: handle selections"
+			index1 = @getAnchorIndex selection.anchorNode, selection.anchorOffset
+			index2 = @getAnchorIndex selection.focusNode, selection.focusOffset
+			if index1 < index2
+				cursor = index1
+				selection_end = index2
+			else
+				cursor = index2
+				selection_end = index1
+
+		console.log "set selection", cursor, selection_end
+		@setState {cursor, selection_end}
 
 	onKeypress: (event) ->
 		event.preventDefault()
 		character = String.fromCharCode event.which
-		console.log "insert character", character, @state.cursor
+		console.log "insert character", character, @state.cursor, @state.selection_end
 
 	onKeyDown: (event) ->
 		if event.keyCode is 8
 			event.preventDefault()
-			console.log 'backspace', @state.cursor
+			console.log 'backspace', @state.cursor, @state.selection_end
 
 	onPaste: (event) ->
 		data = event.clipboardData
 		characters = data.getData data.types[0]
-		console.log "insert characters", characters, @state.cursor
+		console.log "insert characters", characters, @state.cursor, @state.selection_end
 
 	render: ->
 		tree = overlayedTextToTree @state.overlays, @state.text
