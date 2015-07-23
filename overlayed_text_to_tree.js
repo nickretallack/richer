@@ -114,11 +114,11 @@
   addCursorText = function(parent_tag, full_text, start_index, end_index, cursor_index) {
     "The cursor should be placed inside the formatting for the character on its\nleft, if possible.  Since the first character in the document has no character to\nits left, we will use the character on its right instead";
     if (cursor_index === 0 && start_index === 0) {
-      addCursor(parent_tag);
+      addCursor(parent_tag, cursor_index);
       return addSingleText(parent_tag, full_text, start_index, end_index);
     } else if ((start_index < cursor_index && cursor_index <= end_index)) {
       addSingleText(parent_tag, full_text, start_index, cursor_index);
-      addCursor(parent_tag);
+      addCursor(parent_tag, cursor_index);
       return addSingleText(parent_tag, full_text, cursor_index, end_index);
     } else {
       return addSingleText(parent_tag, full_text, start_index, end_index);

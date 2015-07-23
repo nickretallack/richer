@@ -1,14 +1,7 @@
 window.Editor = React.createClass
 	getInitialState: ->
-		text = "hello world"
-
-		text: text
-		cursor: text.length
+		cursor: @props.doc.getText().length
 		selection_end: null
-		overlays: [
-			{attribute:'bold', start:0, end: 3}
-			{attribute:'italic', start:6, end: 11}
-		]
 
 	attributeToTag: (attribute) ->
 		simple_elements =
@@ -55,18 +48,39 @@ window.Editor = React.createClass
 				cursor = index2
 				selection_end = index1
 
-		console.log "set selection", cursor, selection_end
+		# console.log "set selection", cursor, selection_end
 		@setState {cursor, selection_end}
+
+	deleteSelection: ->
+		@props.doc.deleteText @state.cursor, @state.selection_end - @state.cursor
+		@setState selection_end: null
+
+	insertText: (text) ->
+		if @state.selection_end
+			@deleteSelection()
+		@props.doc.insertText @state.cursor, text
+		@setState cursor: @state.cursor + text.length
+		# console.log "insert", text, @state.cursor, @state.selection_end
+
+	deleteText: ->
+		if @state.selection_end
+			@deleteSelection()
+		else
+			@props.doc.deleteText @state.cursor - 1, 1
+			@setState cursor: @state.cursor - 1 
+
+	getText: ->
+		@props.doc.getText()
 
 	onKeypress: (event) ->
 		event.preventDefault()
 		character = String.fromCharCode event.which
-		console.log "insert character", character, @state.cursor, @state.selection_end
+		@insertText character
 
 	onKeyDown: (event) ->
 		if event.keyCode is KEYCODES.backspace
 			event.preventDefault()
-			console.log 'backspace', @state.cursor, @state.selection_end
+			@deleteText()
 		else if event.keyCode is KEYCODES.left
 			if event.shiftKey
 				if not @state.selection_end
@@ -81,27 +95,27 @@ window.Editor = React.createClass
 		else if event.keyCode is KEYCODES.right
 			if event.shiftKey
 				selection_end = @state.selection_end or @state.cursor
-				if selection_end < @state.text.length
+				if selection_end < @getText().length
 					@setState selection_end: selection_end + 1
 			else
 				if @state.selection_end
 					@setState
 						cursor: @state.selection_end
 						selection_end: null
-				else if @state.cursor < @state.text.length
+				else if @state.cursor < @getText().length
 					@setState cursor: @state.cursor + 1
 
 	onPaste: (event) ->
 		data = event.clipboardData
 		characters = data.getData data.types[0]
-		console.log "insert characters", characters, @state.cursor, @state.selection_end
+		@insertText characters
 
 	render: ->
-		tree = overlayedTextToTree @state.overlays, @state.text, @state.cursor
+		tree = overlayedTextToTree @props.doc.getOverlays(), @props.doc.getText(), @state.cursor
 		children = @renderTreeList tree.children
 		React.createElement 'div',
-			'data-start-index': 0
-			'data-end-index': @state.text.length
+			'data-start-index': tree.start_index
+			'data-end-index': tree.end_index
 			onClick: @onClick
 			onKeyPress: @onKeypress
 			onKeyDown: @onKeyDown
@@ -120,5 +134,18 @@ top = (stack) -> stack[stack.length-1]
 
 window.gapi.load 'auth:client,drive-realtime,drive-share', ->
 	doc = gapi.drive.realtime.newInMemoryDocument()
-	React.render <Editor doc={doc}/>, document.getElementById('main')
+	model = doc.getModel()
+	parent = model.getRoot()
+	name = 'text'
+	richtext = new CollaborativeRichText {model, parent, name}
+	richtext.insertText 0, "123456789"
+	richtext.formatText 1, 6, {bold: true}
+	richtext.formatText 5, 3, {italic: true}
+
+	render = ->
+		React.render <Editor doc={richtext}/>, document.getElementById('main')
+
+	parent.addEventListener gapi.drive.realtime.EventType.OBJECT_CHANGED, render
+
+	render()
 

@@ -84,11 +84,11 @@ addCursorText = (parent_tag, full_text, start_index, end_index, cursor_index) ->
 	left, if possible.  Since the first character in the document has no character to
 	its left, we will use the character on its right instead"""
 	if cursor_index is 0 and start_index is 0
-		addCursor parent_tag
+		addCursor parent_tag, cursor_index
 		addSingleText parent_tag, full_text, start_index, end_index
 	else if start_index < cursor_index <= end_index
 		addSingleText parent_tag, full_text, start_index, cursor_index
-		addCursor parent_tag
+		addCursor parent_tag, cursor_index
 		addSingleText parent_tag, full_text, cursor_index, end_index
 	else
 		addSingleText parent_tag, full_text, start_index, end_index

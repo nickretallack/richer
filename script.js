@@ -4,23 +4,9 @@
 
   window.Editor = React.createClass({
     getInitialState: function() {
-      var text;
-      text = "hello world";
       return {
-        text: text,
-        cursor: text.length,
-        selection_end: null,
-        overlays: [
-          {
-            attribute: 'bold',
-            start: 0,
-            end: 3
-          }, {
-            attribute: 'italic',
-            start: 6,
-            end: 11
-          }
-        ]
+        cursor: this.props.doc.getText().length,
+        selection_end: null
       };
     },
     attributeToTag: function(attribute) {
@@ -80,23 +66,50 @@
           selection_end = index1;
         }
       }
-      console.log("set selection", cursor, selection_end);
       return this.setState({
         cursor: cursor,
         selection_end: selection_end
       });
     },
+    deleteSelection: function() {
+      this.props.doc.deleteText(this.state.cursor, this.state.selection_end - this.state.cursor);
+      return this.setState({
+        selection_end: null
+      });
+    },
+    insertText: function(text) {
+      if (this.state.selection_end) {
+        this.deleteSelection();
+      }
+      this.props.doc.insertText(this.state.cursor, text);
+      return this.setState({
+        cursor: this.state.cursor + text.length
+      });
+    },
+    deleteText: function() {
+      if (this.state.selection_end) {
+        return this.deleteSelection();
+      } else {
+        this.props.doc.deleteText(this.state.cursor - 1, 1);
+        return this.setState({
+          cursor: this.state.cursor - 1
+        });
+      }
+    },
+    getText: function() {
+      return this.props.doc.getText();
+    },
     onKeypress: function(event) {
       var character;
       event.preventDefault();
       character = String.fromCharCode(event.which);
-      return console.log("insert character", character, this.state.cursor, this.state.selection_end);
+      return this.insertText(character);
     },
     onKeyDown: function(event) {
       var selection_end;
       if (event.keyCode === KEYCODES.backspace) {
         event.preventDefault();
-        return console.log('backspace', this.state.cursor, this.state.selection_end);
+        return this.deleteText();
       } else if (event.keyCode === KEYCODES.left) {
         if (event.shiftKey) {
           if (!this.state.selection_end) {
@@ -123,7 +136,7 @@
       } else if (event.keyCode === KEYCODES.right) {
         if (event.shiftKey) {
           selection_end = this.state.selection_end || this.state.cursor;
-          if (selection_end < this.state.text.length) {
+          if (selection_end < this.getText().length) {
             return this.setState({
               selection_end: selection_end + 1
             });
@@ -134,7 +147,7 @@
               cursor: this.state.selection_end,
               selection_end: null
             });
-          } else if (this.state.cursor < this.state.text.length) {
+          } else if (this.state.cursor < this.getText().length) {
             return this.setState({
               cursor: this.state.cursor + 1
             });
@@ -146,15 +159,15 @@
       var characters, data;
       data = event.clipboardData;
       characters = data.getData(data.types[0]);
-      return console.log("insert characters", characters, this.state.cursor, this.state.selection_end);
+      return this.insertText(characters);
     },
     render: function() {
       var children, tree;
-      tree = overlayedTextToTree(this.state.overlays, this.state.text, this.state.cursor);
+      tree = overlayedTextToTree(this.props.doc.getOverlays(), this.props.doc.getText(), this.state.cursor);
       children = this.renderTreeList(tree.children);
       return React.createElement('div', {
-        'data-start-index': 0,
-        'data-end-index': this.state.text.length,
+        'data-start-index': tree.start_index,
+        'data-end-index': tree.end_index,
         onClick: this.onClick,
         onKeyPress: this.onKeypress,
         onKeyDown: this.onKeyDown,
@@ -177,11 +190,30 @@
   };
 
   window.gapi.load('auth:client,drive-realtime,drive-share', function() {
-    var doc;
+    var doc, model, name, parent, render, richtext;
     doc = gapi.drive.realtime.newInMemoryDocument();
-    return React.render(React.createElement(Editor, {
-      "doc": doc
-    }), document.getElementById('main'));
+    model = doc.getModel();
+    parent = model.getRoot();
+    name = 'text';
+    richtext = new CollaborativeRichText({
+      model: model,
+      parent: parent,
+      name: name
+    });
+    richtext.insertText(0, "123456789");
+    richtext.formatText(1, 6, {
+      bold: true
+    });
+    richtext.formatText(5, 3, {
+      italic: true
+    });
+    render = function() {
+      return React.render(React.createElement(Editor, {
+        "doc": richtext
+      }), document.getElementById('main'));
+    };
+    parent.addEventListener(gapi.drive.realtime.EventType.OBJECT_CHANGED, render);
+    return render();
   });
 
 }).call(this);

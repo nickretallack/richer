@@ -489,4 +489,45 @@
     return assert.deepEqual(markedTextToTree(normalized_markers, text), tree);
   });
 
+  QUnit.test('cursor edge case', function(assert) {
+    var overlays, text, tree;
+    text = '12';
+    overlays = [
+      {
+        attribute: 'bold',
+        start: 0,
+        end: 1
+      }
+    ];
+    tree = {
+      start_index: 0,
+      end_index: 2,
+      attribute: 'container',
+      children: [
+        {
+          attribute: 'bold',
+          start_index: 0,
+          end_index: 1,
+          children: [
+            {
+              text: '1',
+              start_index: 0,
+              end_index: 1
+            }
+          ]
+        }, {
+          text: '2',
+          start_index: 1,
+          end_index: 2
+        }, {
+          attribute: 'cursor',
+          start_index: 2,
+          end_index: 2,
+          children: []
+        }
+      ]
+    };
+    return assert.deepEqual(overlayedTextToTree(overlays, text, 2), tree);
+  });
+
 }).call(this);
