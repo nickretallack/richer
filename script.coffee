@@ -1,3 +1,11 @@
+intersperse = (list, sep) ->
+  if list.length == 0
+    return []
+  list.slice(1).reduce (xs, x, i) ->
+    xs.concat [sep,x]
+  , [ list[0] ]
+
+
 window.Editor = React.createClass
 	getInitialState: ->
 		# TODO: put the cursor into the collaborative model too and support multiple author cursors
@@ -12,16 +20,30 @@ window.Editor = React.createClass
 			cursor: 'cursor'
 		return simple_elements[attribute]
 
+	renderTextNode: (text, index) ->
+		React.createElement 'span', 
+			'data-start-index': index
+		, text
+
 	renderTree: (node) ->
 		if node.text?
-			return React.createElement 'span', 
-				'data-start-index': node.start_index
-				'data-end-index': node.end_index
-			, node.text
+			console.log node.text
+			start_index = node.start_index
+			parts = node.text.split '\n'
+			elements = []
+			elements.push @renderTextNode parts[0], start_index
+			start_index += parts[0].length
+
+			for part in parts[1..]
+				elements.push React.createElement 'br'
+				elements.push @renderTextNode part, start_index
+				start_index += part.length
+
+			return elements
+
 		tag = @attributeToTag node.attribute
 		React.createElement tag,
 			'data-start-index': node.start_index
-			'data-end-index': node.end_index
 		, @renderTreeList node.children
 
 	renderTreeList: (nodes) ->
@@ -75,7 +97,11 @@ window.Editor = React.createClass
 
 	onKeypress: (event) ->
 		event.preventDefault()
-		character = String.fromCharCode event.which
+		character = if event.which is KEYCODES.enter
+			"\n"
+		else
+			String.fromCharCode event.which
+
 		@insertText character
 
 	onKeyDown: (event) ->
@@ -130,6 +156,7 @@ KEYCODES =
 	right: 39
 	down: 40
 	backspace: 8
+	enter: 13
 
 top = (stack) -> stack[stack.length-1]
 
