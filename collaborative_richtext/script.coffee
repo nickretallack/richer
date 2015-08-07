@@ -26,8 +26,14 @@ class Overlay
   get_start: ->
     @start.index
 
+  set_start: (value) ->
+    @start.index = value
+
   get_end: ->
     @end.index+1
+
+  set_end: (value) ->
+    @end.index = value-1
 
   repr: ->
     {@attribute, start:@get_start(), end:@get_end()}
@@ -88,60 +94,41 @@ class CollaborativeRichText
       return
     overlay_start = overlay.start
     overlay_end = overlay.end
-    matches_start = start_index == overlay_start.index
-    matches_end = end_index == overlay_end.index+1
+    matches_start = start_index == overlay.get_start()
+    matches_end = end_index == overlay.get_end()
 
-    @remove_overlay overlay
     if matches_start and matches_end
-      # remove the whole overlay
-      console.log 'remove whole overlay', attribute
+      @remove_overlay overlay
     else if matches_start
-      # erase the start of this overlay
-      console.log 'remove beginning of overlay', attribute
-      @create_overlay end_index, overlay_end.index+1, attribute
+      overlay.set_start end_index
     else if matches_end
-      # erase the end of this overlay
-      console.log 'remove end of overlay', attribute
-      @create_overlay overlay_start.index, start_index, attribute
+      overlay.set_end start_index
     else
       @split_overlay overlay, start_index, end_index, attribute
     return
 
   split_overlay: (overlay, start_index, end_index, attribute) ->
-    console.log 'split overlay', attribute
-    @create_overlay overlay.start.index, start_index, attribute # first half
-    @create_overlay end_index, overlay.end.index+1, attribute # second half
+    overlay_end = overlay.get_end()
+    overlay.set_end start_index # first half
+    @create_overlay end_index, overlay_end, attribute # second half
 
   extend_or_create_overlay: (start_index, end_index, attribute) ->
     found_start = @find_colliding_overlay attribute, start_index
     found_end = @find_colliding_overlay attribute, end_index
     if found_start and found_end
-      @connect_two_overlays found_start, found_end, attribute
+      @connect_two_overlays found_start, found_end
     else if found_start
-      @extend_overlay_forward found_start, end_index, attribute
+      found_start.set_end end_index
     else if found_end
-      @extend_overlay_backward found_end, start_index, attribute
+      found_end.set_start start_index
     else
       console.log 'create new overlay', attribute
       @create_overlay start_index, end_index, attribute
     return
 
-  connect_two_overlays: (first_overlay, second_overlay, attribute) ->
-    console.log 'connect two overlays', attribute
-    @remove_overlay first_overlay
+  connect_two_overlays: (first_overlay, second_overlay) ->
     @remove_overlay second_overlay
-    @create_overlay first_overlay.start.index, second_overlay.end.index+1, attribute    
-
-  extend_overlay_forward: (overlay, end_index, attribute) ->
-    console.log 'extend overlay forward', attribute
-    @remove_overlay overlay
-    @create_overlay overlay.start.index, end_index, attribute
-
-  extend_overlay_backward: (overlay, start_index, attribute) ->
-    console.log 'extend overlay backward', attribute
-    @remove_overlay overlay
-    @create_overlay start_index, overlay.end.index+1, attribute
-
+    first_overlay.set_end second_overlay.get_end()
 
   # Public API
   ### A note on indexes:
@@ -178,9 +165,7 @@ class CollaborativeRichText
 
   getOverlays: ->
     for overlay in @overlays.asArray()
-      attribute: overlay.attribute
-      start: overlay.start.index
-      end: overlay.end.index + 1
+      overlay.repr()
 
 window.CollaborativeRichText = CollaborativeRichText
 window.setup_richtext = -> #CollaborativeRichText.setup = ->

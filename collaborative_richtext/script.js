@@ -43,8 +43,16 @@
       return this.start.index;
     };
 
+    Overlay.prototype.set_start = function(value) {
+      return this.start.index = value;
+    };
+
     Overlay.prototype.get_end = function() {
       return this.end.index + 1;
+    };
+
+    Overlay.prototype.set_end = function(value) {
+      return this.end.index = value - 1;
     };
 
     Overlay.prototype.repr = function() {
@@ -145,26 +153,24 @@
       }
       overlay_start = overlay.start;
       overlay_end = overlay.end;
-      matches_start = start_index === overlay_start.index;
-      matches_end = end_index === overlay_end.index + 1;
-      this.remove_overlay(overlay);
+      matches_start = start_index === overlay.get_start();
+      matches_end = end_index === overlay.get_end();
       if (matches_start && matches_end) {
-        console.log('remove whole overlay', attribute);
+        this.remove_overlay(overlay);
       } else if (matches_start) {
-        console.log('remove beginning of overlay', attribute);
-        this.create_overlay(end_index, overlay_end.index + 1, attribute);
+        overlay.set_start(end_index);
       } else if (matches_end) {
-        console.log('remove end of overlay', attribute);
-        this.create_overlay(overlay_start.index, start_index, attribute);
+        overlay.set_end(start_index);
       } else {
         this.split_overlay(overlay, start_index, end_index, attribute);
       }
     };
 
     CollaborativeRichText.prototype.split_overlay = function(overlay, start_index, end_index, attribute) {
-      console.log('split overlay', attribute);
-      this.create_overlay(overlay.start.index, start_index, attribute);
-      return this.create_overlay(end_index, overlay.end.index + 1, attribute);
+      var overlay_end;
+      overlay_end = overlay.get_end();
+      overlay.set_end(start_index);
+      return this.create_overlay(end_index, overlay_end, attribute);
     };
 
     CollaborativeRichText.prototype.extend_or_create_overlay = function(start_index, end_index, attribute) {
@@ -172,34 +178,20 @@
       found_start = this.find_colliding_overlay(attribute, start_index);
       found_end = this.find_colliding_overlay(attribute, end_index);
       if (found_start && found_end) {
-        this.connect_two_overlays(found_start, found_end, attribute);
+        this.connect_two_overlays(found_start, found_end);
       } else if (found_start) {
-        this.extend_overlay_forward(found_start, end_index, attribute);
+        found_start.set_end(end_index);
       } else if (found_end) {
-        this.extend_overlay_backward(found_end, start_index, attribute);
+        found_end.set_start(start_index);
       } else {
         console.log('create new overlay', attribute);
         this.create_overlay(start_index, end_index, attribute);
       }
     };
 
-    CollaborativeRichText.prototype.connect_two_overlays = function(first_overlay, second_overlay, attribute) {
-      console.log('connect two overlays', attribute);
-      this.remove_overlay(first_overlay);
+    CollaborativeRichText.prototype.connect_two_overlays = function(first_overlay, second_overlay) {
       this.remove_overlay(second_overlay);
-      return this.create_overlay(first_overlay.start.index, second_overlay.end.index + 1, attribute);
-    };
-
-    CollaborativeRichText.prototype.extend_overlay_forward = function(overlay, end_index, attribute) {
-      console.log('extend overlay forward', attribute);
-      this.remove_overlay(overlay);
-      return this.create_overlay(overlay.start.index, end_index, attribute);
-    };
-
-    CollaborativeRichText.prototype.extend_overlay_backward = function(overlay, start_index, attribute) {
-      console.log('extend overlay backward', attribute);
-      this.remove_overlay(overlay);
-      return this.create_overlay(start_index, overlay.end.index + 1, attribute);
+      return first_overlay.set_end(second_overlay.get_end());
     };
 
 
@@ -245,11 +237,7 @@
       results = [];
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        results.push({
-          attribute: overlay.attribute,
-          start: overlay.start.index,
-          end: overlay.end.index + 1
-        });
+        results.push(overlay.repr());
       }
       return results;
     };
