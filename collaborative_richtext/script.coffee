@@ -22,8 +22,6 @@ class Overlay
   __collaborativeInitializerFn__: ({@str, start_index, end_index, attribute}) ->
     @model = gapi.drive.realtime.custom.getModel @
 
-    console.log 'create overlay:', start_index, end_index, attribute
-
     start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
     end_ref = @str.registerReference end_index-1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE
 
@@ -32,8 +30,8 @@ class Overlay
     @attribute = attribute
     return  
 
-  collides: (index, attribute) ->
-    attribute == @attribute and @get_start() <= index and @get_end() >= index
+  repr: ->
+    {@attribute, start:@get_start(), end:@get_end()}
 
   get_start: ->
     @start.index
@@ -47,8 +45,14 @@ class Overlay
   set_end: (value) ->
     @end.index = value-1
 
-  repr: ->
-    {@attribute, start:@get_start(), end:@get_end()}
+  collides: (index) ->
+    @get_start() <= index and @get_end() >= index
+
+  collides_attribute: (index, attribute) ->
+    attribute == @attribute and @collides index
+
+  is_inside: (start_index, end_index) ->
+    @get_start() >= start_index and @get_end() <= end_index
 
 
 class CollaborativeRichText
@@ -82,20 +86,17 @@ class CollaborativeRichText
     return
 
   remove_overlay: (overlay) ->
-    console.log 'remove overlay', overlay.repr()
     @overlays.removeValue overlay
     return
 
   find_colliding_overlay: (attribute, index) ->
     for overlay in @overlays.asArray()
-      if overlay.collides index, attribute
+      if overlay.collides_attribute index, attribute
         return overlay
 
   delete_overlay_range: (start_index, end_index) ->
     deletable_overlays = @overlays.asArray().filter (overlay) ->
-      overlay_start = overlay.get_start()
-      overlay_end = overlay.get_end()
-      overlay_start >= start_index and overlay_end <= end_index
+      overlay.is_inside start_index, end_index
     for overlay in deletable_overlays
       @remove_overlay overlay
     return
@@ -136,7 +137,6 @@ class CollaborativeRichText
     else if found_end
       found_end.set_start start_index
     else
-      console.log 'create new overlay', attribute
       @create_overlay start_index, end_index, attribute
     return
 

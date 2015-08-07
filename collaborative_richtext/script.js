@@ -40,7 +40,6 @@
       var attribute, end_index, end_ref, start_index, start_ref;
       this.str = arg.str, start_index = arg.start_index, end_index = arg.end_index, attribute = arg.attribute;
       this.model = gapi.drive.realtime.custom.getModel(this);
-      console.log('create overlay:', start_index, end_index, attribute);
       start_ref = this.str.registerReference(start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE);
       end_ref = this.str.registerReference(end_index - 1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE);
       this.start = start_ref;
@@ -48,8 +47,12 @@
       this.attribute = attribute;
     };
 
-    Overlay.prototype.collides = function(index, attribute) {
-      return attribute === this.attribute && this.get_start() <= index && this.get_end() >= index;
+    Overlay.prototype.repr = function() {
+      return {
+        attribute: this.attribute,
+        start: this.get_start(),
+        end: this.get_end()
+      };
     };
 
     Overlay.prototype.get_start = function() {
@@ -68,12 +71,16 @@
       return this.end.index = value - 1;
     };
 
-    Overlay.prototype.repr = function() {
-      return {
-        attribute: this.attribute,
-        start: this.get_start(),
-        end: this.get_end()
-      };
+    Overlay.prototype.collides = function(index) {
+      return this.get_start() <= index && this.get_end() >= index;
+    };
+
+    Overlay.prototype.collides_attribute = function(index, attribute) {
+      return attribute === this.attribute && this.collides(index);
+    };
+
+    Overlay.prototype.is_inside = function(start_index, end_index) {
+      return this.get_start() >= start_index && this.get_end() <= end_index;
     };
 
     return Overlay;
@@ -128,7 +135,6 @@
     };
 
     CollaborativeRichText.prototype.remove_overlay = function(overlay) {
-      console.log('remove overlay', overlay.repr());
       this.overlays.removeValue(overlay);
     };
 
@@ -137,7 +143,7 @@
       ref = this.overlays.asArray();
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        if (overlay.collides(index, attribute)) {
+        if (overlay.collides_attribute(index, attribute)) {
           return overlay;
         }
       }
@@ -146,10 +152,7 @@
     CollaborativeRichText.prototype.delete_overlay_range = function(start_index, end_index) {
       var deletable_overlays, i, len, overlay;
       deletable_overlays = this.overlays.asArray().filter(function(overlay) {
-        var overlay_end, overlay_start;
-        overlay_start = overlay.get_start();
-        overlay_end = overlay.get_end();
-        return overlay_start >= start_index && overlay_end <= end_index;
+        return overlay.is_inside(start_index, end_index);
       });
       for (i = 0, len = deletable_overlays.length; i < len; i++) {
         overlay = deletable_overlays[i];
@@ -197,7 +200,6 @@
       } else if (found_end) {
         found_end.set_start(start_index);
       } else {
-        console.log('create new overlay', attribute);
         this.create_overlay(start_index, end_index, attribute);
       }
     };
