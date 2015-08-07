@@ -27,9 +27,8 @@ window.Editor = React.createClass
 
 	renderTree: (node) ->
 		if node.text?
-			console.log node.text
 			start_index = node.start_index
-			parts = node.text.split '\n'
+			parts = node.text.replace(/ /g, '\u00A0').split '\n'
 			elements = []
 			elements.push @renderTextNode parts[0], start_index
 			start_index += parts[0].length
@@ -131,6 +130,53 @@ window.Editor = React.createClass
 						selection_end: null
 				else if @state.cursor < @getText().length
 					@setState cursor: @state.cursor + 1
+		else if event.keyCode in [KEYCODES.up, KEYCODES.down]
+			if event.shiftKey
+				console.log "TODO: select up and down"
+			else
+				if @state.selection_end
+					if event.keyCode is KEYCODES.up
+						@setState
+							selection_end: null
+					else if event.keyCode is KEYCODES.down
+						@setState
+							cursor: @state.selection_end
+							selection_end: null
+				else
+					current_line_start = @findLineStart @state.cursor
+					current_line_cursor = @state.cursor - current_line_start
+
+					if event.keyCode is KEYCODES.up
+						if current_line_start is -1
+							@setState cursor: 0
+
+						previous_line_start = @findLineStart current_line_start
+						previous_line_length = current_line_start - previous_line_start
+						previous_line_cursor = Math.min current_line_cursor, previous_line_length
+						@setState cursor: previous_line_start + previous_line_cursor
+
+					else if event.keyCode is KEYCODES.down
+						next_line_start = @findLineEnd @state.cursor
+						if next_line_start is -1
+							@setState cursor: @getText().length
+							return
+
+						next_line_end = @findLineEnd next_line_start+1
+						if next_line_end is -1
+							next_line_end = @getText().length
+
+						next_line_length = next_line_end - next_line_start
+						next_line_cursor = Math.min current_line_cursor, next_line_length
+						@setState cursor: next_line_start + next_line_cursor
+
+	findLineStart: (index) ->
+		# -1 is a useful return value, since the first line has no newline character in it.
+		# This makes the math work out.
+		@getText().lastIndexOf "\n", index-1
+
+	findLineEnd: (index) ->
+		# The end of one line has the same index as the start of the next.
+		@getText().indexOf "\n", index
 
 	onPaste: (event) ->
 		data = event.clipboardData

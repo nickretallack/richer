@@ -36,9 +36,8 @@
     renderTree: function(node) {
       var elements, j, len, part, parts, ref, start_index, tag;
       if (node.text != null) {
-        console.log(node.text);
         start_index = node.start_index;
-        parts = node.text.split('\n');
+        parts = node.text.replace(/ /g, '\u00A0').split('\n');
         elements = [];
         elements.push(this.renderTextNode(parts[0], start_index));
         start_index += parts[0].length;
@@ -129,7 +128,7 @@
       return this.insertText(character);
     },
     onKeyDown: function(event) {
-      var selection_end;
+      var current_line_cursor, current_line_start, next_line_cursor, next_line_end, next_line_length, next_line_start, previous_line_cursor, previous_line_length, previous_line_start, ref, selection_end;
       if (event.keyCode === KEYCODES.backspace) {
         event.preventDefault();
         return this.deleteText();
@@ -176,7 +175,63 @@
             });
           }
         }
+      } else if ((ref = event.keyCode) === KEYCODES.up || ref === KEYCODES.down) {
+        if (event.shiftKey) {
+          return console.log("TODO: select up and down");
+        } else {
+          if (this.state.selection_end) {
+            if (event.keyCode === KEYCODES.up) {
+              return this.setState({
+                selection_end: null
+              });
+            } else if (event.keyCode === KEYCODES.down) {
+              return this.setState({
+                cursor: this.state.selection_end,
+                selection_end: null
+              });
+            }
+          } else {
+            current_line_start = this.findLineStart(this.state.cursor);
+            current_line_cursor = this.state.cursor - current_line_start;
+            if (event.keyCode === KEYCODES.up) {
+              if (current_line_start === -1) {
+                this.setState({
+                  cursor: 0
+                });
+              }
+              previous_line_start = this.findLineStart(current_line_start);
+              previous_line_length = current_line_start - previous_line_start;
+              previous_line_cursor = Math.min(current_line_cursor, previous_line_length);
+              return this.setState({
+                cursor: previous_line_start + previous_line_cursor
+              });
+            } else if (event.keyCode === KEYCODES.down) {
+              next_line_start = this.findLineEnd(this.state.cursor);
+              if (next_line_start === -1) {
+                this.setState({
+                  cursor: this.getText().length
+                });
+                return;
+              }
+              next_line_end = this.findLineEnd(next_line_start + 1);
+              if (next_line_end === -1) {
+                next_line_end = this.getText().length;
+              }
+              next_line_length = next_line_end - next_line_start;
+              next_line_cursor = Math.min(current_line_cursor, next_line_length);
+              return this.setState({
+                cursor: next_line_start + next_line_cursor
+              });
+            }
+          }
+        }
       }
+    },
+    findLineStart: function(index) {
+      return this.getText().lastIndexOf("\n", index - 1);
+    },
+    findLineEnd: function(index) {
+      return this.getText().indexOf("\n", index);
     },
     onPaste: function(event) {
       var characters, data;
