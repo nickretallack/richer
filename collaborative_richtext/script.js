@@ -115,7 +115,7 @@
         }
         attributes[attribute].push({
           start: overlay.get('start').index,
-          end: overlay.get('end').index
+          end: overlay.get('end').index + 1
         });
       }
       for (attribute in attributes) {
@@ -136,7 +136,7 @@
       var end_ref, start_ref;
       console.log('create overlay:', start_index, end_index, attribute);
       start_ref = this.str.registerReference(start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE);
-      end_ref = this.str.registerReference(end_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE);
+      end_ref = this.str.registerReference(end_index - 1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE);
       this.overlays.push(this.model.createMap({
         start: start_ref,
         end: end_ref,
@@ -146,7 +146,7 @@
     };
 
     CollaborativeRichText.prototype.remove_overlay = function(overlay) {
-      console.log('remove overlay', overlay.get('start').index, overlay.get('end').index, overlay.get('attribute'));
+      console.log('remove overlay', overlay.get('start').index, overlay.get('end').index + 1, overlay.get('attribute'));
       this.overlays.removeValue(overlay);
     };
 
@@ -155,7 +155,7 @@
       ref = this.overlays.asArray();
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        if (attribute === overlay.get('attribute') && overlay.get('start').index <= index && overlay.get('end').index >= index) {
+        if (attribute === overlay.get('attribute') && overlay.get('start').index <= index && overlay.get('end').index + 1 >= index) {
           return overlay;
         }
       }
@@ -166,7 +166,7 @@
       deletable_overlays = this.overlays.asArray().filter(function(overlay) {
         var overlay_end, overlay_start;
         overlay_start = overlay.get('start').index;
-        overlay_end = overlay.get('end').index;
+        overlay_end = overlay.get('end').index + 1;
         return overlay_start >= start_index && overlay_end <= end_index;
       });
       for (i = 0, len = deletable_overlays.length; i < len; i++) {
@@ -185,13 +185,13 @@
       overlay_start = overlay.get('start');
       overlay_end = overlay.get('end');
       matches_start = start_index === overlay_start.index;
-      matches_end = end_index === overlay_end.index;
+      matches_end = end_index === overlay_end.index + 1;
       this.remove_overlay(overlay);
       if (matches_start && matches_end) {
         console.log('remove whole overlay', attribute);
       } else if (matches_start) {
         console.log('remove beginning of overlay', attribute);
-        this.create_overlay(end_index, overlay_end.index, attribute);
+        this.create_overlay(end_index, overlay_end.index + 1, attribute);
       } else if (matches_end) {
         console.log('remove end of overlay', attribute);
         this.create_overlay(overlay_start.index, start_index, attribute);
@@ -203,7 +203,7 @@
     CollaborativeRichText.prototype.split_overlay = function(overlay, start_index, end_index, attribute) {
       console.log('split overlay', attribute);
       this.create_overlay(overlay.get('start').index, start_index, attribute);
-      return this.create_overlay(end_index, overlay.get('end').index, attribute);
+      return this.create_overlay(end_index, overlay.get('end').index + 1, attribute);
     };
 
     CollaborativeRichText.prototype.extend_or_create_overlay = function(start_index, end_index, attribute) {
@@ -226,7 +226,7 @@
       console.log('connect two overlays', attribute);
       this.remove_overlay(first_overlay);
       this.remove_overlay(second_overlay);
-      return this.create_overlay(first_overlay.get('start').index, second_overlay.get('end').index, attribute);
+      return this.create_overlay(first_overlay.get('start').index, second_overlay.get('end').index + 1, attribute);
     };
 
     CollaborativeRichText.prototype.extend_overlay_forward = function(overlay, end_index, attribute) {
@@ -238,12 +238,20 @@
     CollaborativeRichText.prototype.extend_overlay_backward = function(overlay, start_index, attribute) {
       console.log('extend overlay backward', attribute);
       this.remove_overlay(overlay);
-      return this.create_overlay(start_index, overlay.get('end').index, attribute);
+      return this.create_overlay(start_index, overlay.get('end').index + 1, attribute);
     };
+
+
+    /* A note on indexes:
+    In Google Drive Realtime API, indexes refer to the positions of actual characters.
+    However, I find it more convenient to have indexes refer to the spaces between characters.
+    Therefore, in the actual Model used with Google, I will use character indexes,
+    but in my public API functions I will act as if they are the spaces between.
+     */
 
     CollaborativeRichText.prototype.formatText = function(index, length, attributes) {
       var attribute, end_index, value;
-      end_index = index + length - 1;
+      end_index = index + length;
       for (attribute in attributes) {
         value = attributes[attribute];
         if (value) {

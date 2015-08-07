@@ -1,5 +1,6 @@
 window.Editor = React.createClass
 	getInitialState: ->
+		# TODO: put the cursor into the collaborative model too and support multiple author cursors
 		cursor: @props.doc.getText().length
 		selection_end: null
 
