@@ -4,6 +4,7 @@
 
   run_tests = function() {
     var doc, model, name, parent, richtext;
+    setup_richtext();
     doc = gapi.drive.realtime.newInMemoryDocument();
     model = doc.getModel();
     parent = model.getRoot();
@@ -15,11 +16,8 @@
     QUnit.module('tests', {
       beforeEach: function(assert) {
         parent.clear();
-        richtext = new CollaborativeRichText({
-          model: model,
-          parent: parent,
-          name: name
-        });
+        richtext = model.create('CollaborativeRichText');
+        parent.set(name, richtext);
         return richtext.insertText(0, "123456789");
       }
     });

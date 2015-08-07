@@ -6,61 +6,25 @@ random_character = ->
 random_id = (length) ->
   (random_character() for _ in [0..length]).join('')
 
+class Overlay
+  constructor: ({@model, @str, @overlays, @overlay, start_index, end_index, attribute}) ->
+    unless @overlay?
+      console.log 'create overlay:', start_index, end_index, attribute
+      start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
+      end_ref = @str.registerReference end_index-1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE
+      @overlay = @model.createMap
+        start: start_ref
+        end: end_ref
+        attribute: attribute
+        id: random_id 20
+      @overlays.push @overlay
+      return  
+
 class CollaborativeRichText
-  constructor: ({@model, parent, name, handlers}) ->
-    handlers ?= {}
-    @setup_model parent, name
-    @setup_events handlers
-    @run_initial_events handlers
-
-  setup_model: (parent, name) ->
-    @obj = @get_or_create_field @model.createMap, parent, name
-    @str = @get_or_create_field @model.createString, @obj, 'text'
-    @overlays = @get_or_create_field @model.createList, @obj, 'overlays'
-
-  get_or_create_field: (constructor, parent, name) ->
-    # progressively extend it in case they have an incompatible model and we're adding new features
-    result = parent.get name
-    unless result
-      result = constructor.call @model
-      parent.set name, result
-    return result
-
-  setup_events: (handlers) ->
-    @overlays.addEventListener gapi.drive.realtime.EventType.VALUES_ADDED, (event) ->
-      if handlers.preview_add_overlay
-        event.values.forEach handlers.preview_add_overlay
-      if handlers.apply_format and not event.isLocal
-        event.values.forEach (item) ->
-          handlers.apply_format item, true
-      return
-
-    @overlays.addEventListener gapi.drive.realtime.EventType.VALUES_REMOVED, (event) ->
-      if handlers.preview_remove_overlay
-        event.values.forEach handlers.preview_remove_overlay
-      if handlers.apply_format and not event.isLocal
-        event.values.forEach (item) ->
-          handlers.apply_format item, false
-      return
-
-    @str.addEventListener gapi.drive.realtime.EventType.TEXT_INSERTED, (event) ->
-      if not event.isLocal
-        console.log 'INSERTED', event.index, event.text
-        handlers.insert_text? event.index, event.text
-      return
-
-    @str.addEventListener gapi.drive.realtime.EventType.TEXT_DELETED, (event) ->
-      if not event.isLocal
-        console.log 'DELETED', event.index, event.text
-        handlers.delete_text? event.index, event.text
-      return
-
-  run_initial_events: (handlers) ->
-    handlers.insert_text? 0, @str.getText()
-    if handlers.preview_add_overlay
-      @overlays.asArray().forEach handlers.preview_add_overlay
-    if handlers.apply_format
-      @overlays.asArray().forEach (item) => handlers.apply_format item, true
+  __collaborativeInitializerFn__: ->
+    @model = gapi.drive.realtime.custom.getModel @
+    @str = @model.createString()
+    @overlays = @model.createList()
 
   # Overlays
 
@@ -83,15 +47,7 @@ class CollaborativeRichText
     return attributes
 
   create_overlay: (start_index, end_index, attribute) ->
-    console.log 'create overlay:', start_index, end_index, attribute
-    start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
-    end_ref = @str.registerReference end_index-1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE
-    @overlays.push @model.createMap
-      start: start_ref
-      end: end_ref
-      attribute: attribute
-      id: random_id 20
-    return
+    new Overlay {start_index, end_index, attribute, @str, @overlays, @model}
 
   remove_overlay: (overlay) ->
     console.log 'remove overlay', overlay.get('start').index, overlay.get('end').index+1, overlay.get('attribute')
@@ -214,3 +170,6 @@ class CollaborativeRichText
       end: overlay.get('end').index + 1
 
 window.CollaborativeRichText = CollaborativeRichText
+window.setup_richtext = -> #CollaborativeRichText.setup = ->
+  gapi.drive.realtime.custom.registerType CollaborativeRichText, 'CollaborativeRichText'
+  # gapi.drive.realtime.custom.setInitializer CollaborativeRichText, CollaborativeRichText::setup_model

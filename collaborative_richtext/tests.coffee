@@ -1,4 +1,5 @@
 run_tests = ->
+  setup_richtext()
   doc = gapi.drive.realtime.newInMemoryDocument()
   model = doc.getModel()
   parent = model.getRoot()
@@ -11,7 +12,8 @@ run_tests = ->
   QUnit.module 'tests',
     beforeEach: (assert) ->
       parent.clear()
-      richtext = new CollaborativeRichText {model, parent, name}
+      richtext = model.create('CollaborativeRichText')
+      parent.set name, richtext
       richtext.insertText 0, "123456789"
 
   QUnit.test 'extend forward', (assert) ->

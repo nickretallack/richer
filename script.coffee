@@ -134,11 +134,12 @@ KEYCODES =
 top = (stack) -> stack[stack.length-1]
 
 window.gapi.load 'auth:client,drive-realtime,drive-share', ->
+	setup_richtext()
 	doc = gapi.drive.realtime.newInMemoryDocument()
 	model = doc.getModel()
 	parent = model.getRoot()
-	name = 'text'
-	richtext = new CollaborativeRichText {model, parent, name}
+	richtext = model.create(CollaborativeRichText)
+	parent.set 'text', richtext
 	richtext.insertText 0, "123456789"
 	richtext.formatText 1, 6, {bold: true}
 	richtext.formatText 5, 3, {italic: true}

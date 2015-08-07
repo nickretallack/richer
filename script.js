@@ -190,16 +190,13 @@
   };
 
   window.gapi.load('auth:client,drive-realtime,drive-share', function() {
-    var doc, model, name, parent, render, richtext;
+    var doc, model, parent, render, richtext;
+    setup_richtext();
     doc = gapi.drive.realtime.newInMemoryDocument();
     model = doc.getModel();
     parent = model.getRoot();
-    name = 'text';
-    richtext = new CollaborativeRichText({
-      model: model,
-      parent: parent,
-      name: name
-    });
+    richtext = model.create(CollaborativeRichText);
+    parent.set('text', richtext);
     richtext.insertText(0, "123456789");
     richtext.formatText(1, 6, {
       bold: true
