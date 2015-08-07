@@ -33,7 +33,26 @@
       this.start = start_ref;
       this.end = end_ref;
       this.attribute = attribute;
-      this.id = random_id(20);
+    };
+
+    Overlay.prototype.collides = function(index, attribute) {
+      return attribute === this.attribute && this.start.index <= index && this.end.index + 1 >= index;
+    };
+
+    Overlay.prototype.get_start = function() {
+      return this.start.index;
+    };
+
+    Overlay.prototype.get_end = function() {
+      return this.end.index + 1;
+    };
+
+    Overlay.prototype.repr = function() {
+      return {
+        attribute: this.attribute,
+        start: this.get_start(),
+        end: this.get_end()
+      };
     };
 
     return Overlay;
@@ -60,8 +79,8 @@
           attributes[attribute] = [];
         }
         attributes[attribute].push({
-          start: overlay.start.index,
-          end: overlay.end.index + 1
+          start: overlay.get_start(),
+          end: overlay.get_end()
         });
       }
       for (attribute in attributes) {
@@ -88,7 +107,7 @@
     };
 
     CollaborativeRichText.prototype.remove_overlay = function(overlay) {
-      console.log('remove overlay', overlay.start.index, overlay.end.index + 1, overlay.attribute);
+      console.log('remove overlay', overlay.repr());
       this.overlays.removeValue(overlay);
     };
 
@@ -97,7 +116,7 @@
       ref = this.overlays.asArray();
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        if (attribute === overlay.attribute && overlay.start.index <= index && overlay.end.index + 1 >= index) {
+        if (overlay.collides(index, attribute)) {
           return overlay;
         }
       }
@@ -107,8 +126,8 @@
       var deletable_overlays, i, len, overlay;
       deletable_overlays = this.overlays.asArray().filter(function(overlay) {
         var overlay_end, overlay_start;
-        overlay_start = overlay.start.index;
-        overlay_end = overlay.end.index + 1;
+        overlay_start = overlay.get_start();
+        overlay_end = overlay.get_end();
         return overlay_start >= start_index && overlay_end <= end_index;
       });
       for (i = 0, len = deletable_overlays.length; i < len; i++) {

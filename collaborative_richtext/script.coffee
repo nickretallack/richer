@@ -18,8 +18,20 @@ class Overlay
     @start = start_ref
     @end = end_ref
     @attribute = attribute
-    @id = random_id 20
     return  
+
+  collides: (index, attribute) ->
+    attribute == @attribute and @start.index <= index and @end.index+1 >= index
+
+  get_start: ->
+    @start.index
+
+  get_end: ->
+    @end.index+1
+
+  repr: ->
+    {@attribute, start:@get_start(), end:@get_end()}
+
 
 class CollaborativeRichText
   __collaborativeInitializerFn__: ->
@@ -35,8 +47,8 @@ class CollaborativeRichText
       attribute = overlay.attribute
       attributes[attribute] ?= []
       attributes[attribute].push
-        start: overlay.start.index
-        end: overlay.end.index + 1
+        start: overlay.get_start()
+        end: overlay.get_end()
 
     for attribute, overlays of attributes
       overlays.sort (a,b) ->
@@ -51,19 +63,19 @@ class CollaborativeRichText
     @overlays.push @model.create Overlay, {start_index, end_index, attribute, @str}
 
   remove_overlay: (overlay) ->
-    console.log 'remove overlay', overlay.start.index, overlay.end.index+1, overlay.attribute
+    console.log 'remove overlay', overlay.repr()
     @overlays.removeValue overlay
     return
 
   find_colliding_overlay: (attribute, index) ->
     for overlay in @overlays.asArray()
-      if attribute == overlay.attribute and overlay.start.index <= index and overlay.end.index+1 >= index
+      if overlay.collides index, attribute
         return overlay
 
   delete_overlay_range: (start_index, end_index) ->
     deletable_overlays = @overlays.asArray().filter (overlay) ->
-      overlay_start = overlay.start.index
-      overlay_end = overlay.end.index+1
+      overlay_start = overlay.get_start()
+      overlay_end = overlay.get_end()
       overlay_start >= start_index and overlay_end <= end_index
     for overlay in deletable_overlays
       @remove_overlay overlay
