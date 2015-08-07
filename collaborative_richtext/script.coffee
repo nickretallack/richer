@@ -7,6 +7,18 @@ random_id = (length) ->
   (random_character() for _ in [0..length]).join('')
 
 class Overlay
+  ###
+  Represents a styled portion of a collaborative string.
+  Examples: bold, italic
+
+  It tracks the place in the string where it begins and ends.
+
+  In Google Drive Realtime API, indexes refer to the positions of actual characters.
+  However, I find it more convenient to have indexes refer to the spaces between characters.
+  That's why I created the getters and setters on this class, so nobody else has to
+  deal with this off-by-one difference.
+  ###
+
   __collaborativeInitializerFn__: ({@str, start_index, end_index, attribute}) ->
     @model = gapi.drive.realtime.custom.getModel @
 
@@ -21,7 +33,7 @@ class Overlay
     return  
 
   collides: (index, attribute) ->
-    attribute == @attribute and @start.index <= index and @end.index+1 >= index
+    attribute == @attribute and @get_start() <= index and @get_end() >= index
 
   get_start: ->
     @start.index
@@ -67,6 +79,7 @@ class CollaborativeRichText
 
   create_overlay: (start_index, end_index, attribute) ->
     @overlays.push @model.create Overlay, {start_index, end_index, attribute, @str}
+    return
 
   remove_overlay: (overlay) ->
     console.log 'remove overlay', overlay.repr()
@@ -111,6 +124,7 @@ class CollaborativeRichText
     overlay_end = overlay.get_end()
     overlay.set_end start_index # first half
     @create_overlay end_index, overlay_end, attribute # second half
+    return
 
   extend_or_create_overlay: (start_index, end_index, attribute) ->
     found_start = @find_colliding_overlay attribute, start_index
@@ -129,16 +143,9 @@ class CollaborativeRichText
   connect_two_overlays: (first_overlay, second_overlay) ->
     @remove_overlay second_overlay
     first_overlay.set_end second_overlay.get_end()
+    return
 
   # Public API
-  ### A note on indexes:
-  In Google Drive Realtime API, indexes refer to the positions of actual characters.
-  However, I find it more convenient to have indexes refer to the spaces between characters.
-  Therefore, in the actual Model used with Google, I will use character indexes,
-  but in my public API functions I will act as if they are the spaces between.
-
-
-  ###
 
   formatText: (index, length, attributes) ->
     end_index = index + length

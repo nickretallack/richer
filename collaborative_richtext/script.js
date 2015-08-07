@@ -23,6 +23,19 @@
   Overlay = (function() {
     function Overlay() {}
 
+
+    /*
+    Represents a styled portion of a collaborative string.
+    Examples: bold, italic
+    
+    It tracks the place in the string where it begins and ends.
+    
+    In Google Drive Realtime API, indexes refer to the positions of actual characters.
+    However, I find it more convenient to have indexes refer to the spaces between characters.
+    That's why I created the getters and setters on this class, so nobody else has to
+    deal with this off-by-one difference.
+     */
+
     Overlay.prototype.__collaborativeInitializerFn__ = function(arg) {
       var attribute, end_index, end_ref, start_index, start_ref;
       this.str = arg.str, start_index = arg.start_index, end_index = arg.end_index, attribute = arg.attribute;
@@ -36,7 +49,7 @@
     };
 
     Overlay.prototype.collides = function(index, attribute) {
-      return attribute === this.attribute && this.start.index <= index && this.end.index + 1 >= index;
+      return attribute === this.attribute && this.get_start() <= index && this.get_end() >= index;
     };
 
     Overlay.prototype.get_start = function() {
@@ -106,7 +119,7 @@
     };
 
     CollaborativeRichText.prototype.create_overlay = function(start_index, end_index, attribute) {
-      return this.overlays.push(this.model.create(Overlay, {
+      this.overlays.push(this.model.create(Overlay, {
         start_index: start_index,
         end_index: end_index,
         attribute: attribute,
@@ -170,7 +183,7 @@
       var overlay_end;
       overlay_end = overlay.get_end();
       overlay.set_end(start_index);
-      return this.create_overlay(end_index, overlay_end, attribute);
+      this.create_overlay(end_index, overlay_end, attribute);
     };
 
     CollaborativeRichText.prototype.extend_or_create_overlay = function(start_index, end_index, attribute) {
@@ -191,16 +204,8 @@
 
     CollaborativeRichText.prototype.connect_two_overlays = function(first_overlay, second_overlay) {
       this.remove_overlay(second_overlay);
-      return first_overlay.set_end(second_overlay.get_end());
+      first_overlay.set_end(second_overlay.get_end());
     };
-
-
-    /* A note on indexes:
-    In Google Drive Realtime API, indexes refer to the positions of actual characters.
-    However, I find it more convenient to have indexes refer to the spaces between characters.
-    Therefore, in the actual Model used with Google, I will use character indexes,
-    but in my public API functions I will act as if they are the spaces between.
-     */
 
     CollaborativeRichText.prototype.formatText = function(index, length, attributes) {
       var attribute, end_index, value;
