@@ -7,18 +7,19 @@ random_id = (length) ->
   (random_character() for _ in [0..length]).join('')
 
 class Overlay
-  constructor: ({@model, @str, @overlays, @overlay, start_index, end_index, attribute}) ->
-    unless @overlay?
-      console.log 'create overlay:', start_index, end_index, attribute
-      start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
-      end_ref = @str.registerReference end_index-1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE
-      @overlay = @model.createMap
-        start: start_ref
-        end: end_ref
-        attribute: attribute
-        id: random_id 20
-      @overlays.push @overlay
-      return  
+  __collaborativeInitializerFn__: ({@str, start_index, end_index, attribute}) ->
+    @model = gapi.drive.realtime.custom.getModel @
+
+    console.log 'create overlay:', start_index, end_index, attribute
+
+    start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
+    end_ref = @str.registerReference end_index-1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE
+
+    @start = start_ref
+    @end = end_ref
+    @attribute = attribute
+    @id = random_id 20
+    return  
 
 class CollaborativeRichText
   __collaborativeInitializerFn__: ->
@@ -31,11 +32,11 @@ class CollaborativeRichText
   debug_overlays: ->
     attributes = {}
     for overlay in @overlays.asArray()
-      attribute = overlay.get('attribute')
+      attribute = overlay.attribute
       attributes[attribute] ?= []
       attributes[attribute].push
-        start: overlay.get('start').index
-        end: overlay.get('end').index + 1
+        start: overlay.start.index
+        end: overlay.end.index + 1
 
     for attribute, overlays of attributes
       overlays.sort (a,b) ->
@@ -47,22 +48,22 @@ class CollaborativeRichText
     return attributes
 
   create_overlay: (start_index, end_index, attribute) ->
-    new Overlay {start_index, end_index, attribute, @str, @overlays, @model}
+    @overlays.push @model.create Overlay, {start_index, end_index, attribute, @str}
 
   remove_overlay: (overlay) ->
-    console.log 'remove overlay', overlay.get('start').index, overlay.get('end').index+1, overlay.get('attribute')
+    console.log 'remove overlay', overlay.start.index, overlay.end.index+1, overlay.attribute
     @overlays.removeValue overlay
     return
 
   find_colliding_overlay: (attribute, index) ->
     for overlay in @overlays.asArray()
-      if attribute == overlay.get('attribute') and overlay.get('start').index <= index and overlay.get('end').index+1 >= index
+      if attribute == overlay.attribute and overlay.start.index <= index and overlay.end.index+1 >= index
         return overlay
 
   delete_overlay_range: (start_index, end_index) ->
     deletable_overlays = @overlays.asArray().filter (overlay) ->
-      overlay_start = overlay.get('start').index
-      overlay_end = overlay.get('end').index+1
+      overlay_start = overlay.start.index
+      overlay_end = overlay.end.index+1
       overlay_start >= start_index and overlay_end <= end_index
     for overlay in deletable_overlays
       @remove_overlay overlay
@@ -73,8 +74,8 @@ class CollaborativeRichText
     if !overlay
       console.log 'ANOMALY - deleted overlay that wasn\'t found'
       return
-    overlay_start = overlay.get('start')
-    overlay_end = overlay.get('end')
+    overlay_start = overlay.start
+    overlay_end = overlay.end
     matches_start = start_index == overlay_start.index
     matches_end = end_index == overlay_end.index+1
 
@@ -96,8 +97,8 @@ class CollaborativeRichText
 
   split_overlay: (overlay, start_index, end_index, attribute) ->
     console.log 'split overlay', attribute
-    @create_overlay overlay.get('start').index, start_index, attribute # first half
-    @create_overlay end_index, overlay.get('end').index+1, attribute # second half
+    @create_overlay overlay.start.index, start_index, attribute # first half
+    @create_overlay end_index, overlay.end.index+1, attribute # second half
 
   extend_or_create_overlay: (start_index, end_index, attribute) ->
     found_start = @find_colliding_overlay attribute, start_index
@@ -117,17 +118,17 @@ class CollaborativeRichText
     console.log 'connect two overlays', attribute
     @remove_overlay first_overlay
     @remove_overlay second_overlay
-    @create_overlay first_overlay.get('start').index, second_overlay.get('end').index+1, attribute    
+    @create_overlay first_overlay.start.index, second_overlay.end.index+1, attribute    
 
   extend_overlay_forward: (overlay, end_index, attribute) ->
     console.log 'extend overlay forward', attribute
     @remove_overlay overlay
-    @create_overlay overlay.get('start').index, end_index, attribute
+    @create_overlay overlay.start.index, end_index, attribute
 
   extend_overlay_backward: (overlay, start_index, attribute) ->
     console.log 'extend overlay backward', attribute
     @remove_overlay overlay
-    @create_overlay start_index, overlay.get('end').index+1, attribute
+    @create_overlay start_index, overlay.end.index+1, attribute
 
 
   # Public API
@@ -165,11 +166,12 @@ class CollaborativeRichText
 
   getOverlays: ->
     for overlay in @overlays.asArray()
-      attribute: overlay.get('attribute')
-      start: overlay.get('start').index
-      end: overlay.get('end').index + 1
+      attribute: overlay.attribute
+      start: overlay.start.index
+      end: overlay.end.index + 1
 
 window.CollaborativeRichText = CollaborativeRichText
 window.setup_richtext = -> #CollaborativeRichText.setup = ->
   gapi.drive.realtime.custom.registerType CollaborativeRichText, 'CollaborativeRichText'
+  gapi.drive.realtime.custom.registerType Overlay, 'CollaborativeRichTextOverlay'
   # gapi.drive.realtime.custom.setInitializer CollaborativeRichText, CollaborativeRichText::setup_model

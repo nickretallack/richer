@@ -21,23 +21,20 @@
   };
 
   Overlay = (function() {
-    function Overlay(arg) {
+    function Overlay() {}
+
+    Overlay.prototype.__collaborativeInitializerFn__ = function(arg) {
       var attribute, end_index, end_ref, start_index, start_ref;
-      this.model = arg.model, this.str = arg.str, this.overlays = arg.overlays, this.overlay = arg.overlay, start_index = arg.start_index, end_index = arg.end_index, attribute = arg.attribute;
-      if (this.overlay == null) {
-        console.log('create overlay:', start_index, end_index, attribute);
-        start_ref = this.str.registerReference(start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE);
-        end_ref = this.str.registerReference(end_index - 1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE);
-        this.overlay = this.model.createMap({
-          start: start_ref,
-          end: end_ref,
-          attribute: attribute,
-          id: random_id(20)
-        });
-        this.overlays.push(this.overlay);
-        return;
-      }
-    }
+      this.str = arg.str, start_index = arg.start_index, end_index = arg.end_index, attribute = arg.attribute;
+      this.model = gapi.drive.realtime.custom.getModel(this);
+      console.log('create overlay:', start_index, end_index, attribute);
+      start_ref = this.str.registerReference(start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE);
+      end_ref = this.str.registerReference(end_index - 1, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_BEFORE_DELETE);
+      this.start = start_ref;
+      this.end = end_ref;
+      this.attribute = attribute;
+      this.id = random_id(20);
+    };
 
     return Overlay;
 
@@ -58,13 +55,13 @@
       ref = this.overlays.asArray();
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        attribute = overlay.get('attribute');
+        attribute = overlay.attribute;
         if (attributes[attribute] == null) {
           attributes[attribute] = [];
         }
         attributes[attribute].push({
-          start: overlay.get('start').index,
-          end: overlay.get('end').index + 1
+          start: overlay.start.index,
+          end: overlay.end.index + 1
         });
       }
       for (attribute in attributes) {
@@ -82,18 +79,16 @@
     };
 
     CollaborativeRichText.prototype.create_overlay = function(start_index, end_index, attribute) {
-      return new Overlay({
+      return this.overlays.push(this.model.create(Overlay, {
         start_index: start_index,
         end_index: end_index,
         attribute: attribute,
-        str: this.str,
-        overlays: this.overlays,
-        model: this.model
-      });
+        str: this.str
+      }));
     };
 
     CollaborativeRichText.prototype.remove_overlay = function(overlay) {
-      console.log('remove overlay', overlay.get('start').index, overlay.get('end').index + 1, overlay.get('attribute'));
+      console.log('remove overlay', overlay.start.index, overlay.end.index + 1, overlay.attribute);
       this.overlays.removeValue(overlay);
     };
 
@@ -102,7 +97,7 @@
       ref = this.overlays.asArray();
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
-        if (attribute === overlay.get('attribute') && overlay.get('start').index <= index && overlay.get('end').index + 1 >= index) {
+        if (attribute === overlay.attribute && overlay.start.index <= index && overlay.end.index + 1 >= index) {
           return overlay;
         }
       }
@@ -112,8 +107,8 @@
       var deletable_overlays, i, len, overlay;
       deletable_overlays = this.overlays.asArray().filter(function(overlay) {
         var overlay_end, overlay_start;
-        overlay_start = overlay.get('start').index;
-        overlay_end = overlay.get('end').index + 1;
+        overlay_start = overlay.start.index;
+        overlay_end = overlay.end.index + 1;
         return overlay_start >= start_index && overlay_end <= end_index;
       });
       for (i = 0, len = deletable_overlays.length; i < len; i++) {
@@ -129,8 +124,8 @@
         console.log('ANOMALY - deleted overlay that wasn\'t found');
         return;
       }
-      overlay_start = overlay.get('start');
-      overlay_end = overlay.get('end');
+      overlay_start = overlay.start;
+      overlay_end = overlay.end;
       matches_start = start_index === overlay_start.index;
       matches_end = end_index === overlay_end.index + 1;
       this.remove_overlay(overlay);
@@ -149,8 +144,8 @@
 
     CollaborativeRichText.prototype.split_overlay = function(overlay, start_index, end_index, attribute) {
       console.log('split overlay', attribute);
-      this.create_overlay(overlay.get('start').index, start_index, attribute);
-      return this.create_overlay(end_index, overlay.get('end').index + 1, attribute);
+      this.create_overlay(overlay.start.index, start_index, attribute);
+      return this.create_overlay(end_index, overlay.end.index + 1, attribute);
     };
 
     CollaborativeRichText.prototype.extend_or_create_overlay = function(start_index, end_index, attribute) {
@@ -173,19 +168,19 @@
       console.log('connect two overlays', attribute);
       this.remove_overlay(first_overlay);
       this.remove_overlay(second_overlay);
-      return this.create_overlay(first_overlay.get('start').index, second_overlay.get('end').index + 1, attribute);
+      return this.create_overlay(first_overlay.start.index, second_overlay.end.index + 1, attribute);
     };
 
     CollaborativeRichText.prototype.extend_overlay_forward = function(overlay, end_index, attribute) {
       console.log('extend overlay forward', attribute);
       this.remove_overlay(overlay);
-      return this.create_overlay(overlay.get('start').index, end_index, attribute);
+      return this.create_overlay(overlay.start.index, end_index, attribute);
     };
 
     CollaborativeRichText.prototype.extend_overlay_backward = function(overlay, start_index, attribute) {
       console.log('extend overlay backward', attribute);
       this.remove_overlay(overlay);
-      return this.create_overlay(start_index, overlay.get('end').index + 1, attribute);
+      return this.create_overlay(start_index, overlay.end.index + 1, attribute);
     };
 
 
@@ -232,9 +227,9 @@
       for (i = 0, len = ref.length; i < len; i++) {
         overlay = ref[i];
         results.push({
-          attribute: overlay.get('attribute'),
-          start: overlay.get('start').index,
-          end: overlay.get('end').index + 1
+          attribute: overlay.attribute,
+          start: overlay.start.index,
+          end: overlay.end.index + 1
         });
       }
       return results;
@@ -247,7 +242,8 @@
   window.CollaborativeRichText = CollaborativeRichText;
 
   window.setup_richtext = function() {
-    return gapi.drive.realtime.custom.registerType(CollaborativeRichText, 'CollaborativeRichText');
+    gapi.drive.realtime.custom.registerType(CollaborativeRichText, 'CollaborativeRichText');
+    return gapi.drive.realtime.custom.registerType(Overlay, 'CollaborativeRichTextOverlay');
   };
 
 }).call(this);
