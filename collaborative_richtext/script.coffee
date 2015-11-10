@@ -19,7 +19,9 @@ class Overlay
   deal with this off-by-one difference.
   ###
 
-  __collaborativeInitializerFn__: ({@str, start_index, end_index, attribute}) ->
+  collaborative_fields: ['start', 'end', 'attribute']
+
+  initialize: ({@str, start_index, end_index, attribute}) ->
     @model = gapi.drive.realtime.custom.getModel @
 
     start_ref = @str.registerReference start_index, gapi.drive.realtime.IndexReference.DeleteMode.SHIFT_AFTER_DELETE
@@ -28,7 +30,10 @@ class Overlay
     @start = start_ref
     @end = end_ref
     @attribute = attribute
-    return  
+    return
+
+  loaded: ->
+    @model = gapi.drive.realtime.custom.getModel @
 
   repr: ->
     {@attribute, start:@get_start(), end:@get_end()}
@@ -56,10 +61,16 @@ class Overlay
 
 
 class CollaborativeRichText
-  __collaborativeInitializerFn__: ->
+
+  collaborative_fields: ['str', 'overlays']
+
+  initialize: ->
     @model = gapi.drive.realtime.custom.getModel @
     @str = @model.createString()
     @overlays = @model.createList()
+
+  loaded: ->
+    @model = gapi.drive.realtime.custom.getModel @
 
   # Overlays
 
@@ -174,8 +185,14 @@ class CollaborativeRichText
     for overlay in @overlays.asArray()
       overlay.repr()
 
+register_collaborative_fields = (cls, name) ->
+  gapi.drive.realtime.custom.registerType cls, name
+  gapi.drive.realtime.custom.setInitializer cls, cls::initialize
+  gapi.drive.realtime.custom.setOnLoaded cls, cls::loaded
+  for field in cls::collaborative_fields
+    cls.prototype[field] = gapi.drive.realtime.custom.collaborativeField field
+
 window.CollaborativeRichText = CollaborativeRichText
-window.setup_richtext = -> #CollaborativeRichText.setup = ->
-  gapi.drive.realtime.custom.registerType CollaborativeRichText, 'CollaborativeRichText'
-  gapi.drive.realtime.custom.registerType Overlay, 'CollaborativeRichTextOverlay'
-  # gapi.drive.realtime.custom.setInitializer CollaborativeRichText, CollaborativeRichText::setup_model
+window.setup_richtext = ->
+  register_collaborative_fields CollaborativeRichText, 'CollaborativeRichText'
+  register_collaborative_fields Overlay, 'CollaborativeRichTextOverlay'

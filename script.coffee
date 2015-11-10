@@ -1,9 +1,9 @@
 intersperse = (list, sep) ->
-  if list.length == 0
-    return []
-  list.slice(1).reduce (xs, x, i) ->
-    xs.concat [sep,x]
-  , [ list[0] ]
+	if list.length == 0
+		return []
+	list.slice(1).reduce (xs, x, i) ->
+		xs.concat [sep,x]
+	, [ list[0] ]
 
 window.Collaborator = React.createClass
 	render: ->
@@ -227,21 +227,52 @@ KEYCODES =
 
 top = (stack) -> stack[stack.length-1]
 
+CLIENT_ID = '872719575175-jee8p8pnu2k5bhhnledr8un2kpccgr6i.apps.googleusercontent.com'
+
 window.gapi.load 'auth:client,drive-realtime,drive-share', ->
 	setup_richtext()
-	doc = gapi.drive.realtime.newInMemoryDocument()
-	model = doc.getModel()
-	parent = model.getRoot()
-	richtext = model.create(CollaborativeRichText)
-	parent.set 'text', richtext
-	richtext.insertText 0, "123456789"
-	richtext.formatText 1, 6, {bold: true}
-	richtext.formatText 5, 3, {italic: true}
 
-	render = ->
+	realtimeUtils = new utils.RealtimeUtils clientId: CLIENT_ID
+
+	# attempt immediate auth.  If that fails, use a dialog.
+	realtimeUtils.authorize (auth) ->
+		if auth.error
+			realtimeUtils.authorize start, true
+		else
+			start()
+
+	start = ->
+		id = realtimeUtils.getParam('id')
+		if id
+			realtimeUtils.load id.replace('/', ''), loaded, initialize
+		else
+			realtimeUtils.createRealtimeFile 'Rich Text Example', (result) ->
+				window.history.pushState null, null, '?id=' + result.id
+				realtimeUtils.load result.id, loaded, initialize
+				return
+
+	loaded = (doc) -> setTimeout ->
+		model = doc.getModel()
+		parent = model.getRoot()
+		richtext = parent.get('text') or make_initial_doc parent, model
+		render doc, richtext
+		parent.addEventListener gapi.drive.realtime.EventType.OBJECT_CHANGED, ->
+			render doc, richtext
+
+	initialize = (model) -> setTimeout ->
+		parent = model.getRoot()
+		make_initial_doc parent, model
+
+	make_initial_doc = (parent, model) ->
+		richtext = model.create(CollaborativeRichText)
+		parent.set 'text', richtext
+		richtext.insertText 0, "123456789"
+		richtext.formatText 1, 6, {bold: true}
+		richtext.formatText 5, 3, {italic: true}
+		return richtext
+
+	render = (doc, richtext) ->
 		React.render <App richtext={richtext} doc={doc}/>, document.getElementById('main')
 
-	parent.addEventListener gapi.drive.realtime.EventType.OBJECT_CHANGED, render
 
-	render()
 
