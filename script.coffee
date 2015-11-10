@@ -5,6 +5,27 @@ intersperse = (list, sep) ->
     xs.concat [sep,x]
   , [ list[0] ]
 
+window.Collaborator = React.createClass
+	render: ->
+		item = this.props.collaborator
+		<div style={background: item.color}>{item.displayName}</div>
+
+
+window.CollaboratorList = React.createClass
+	render: ->
+		nodes = for item in this.props.doc.getCollaborators()
+			<Collaborator collaborator={item} key={item.sessionId}/>
+
+		<div>{nodes}</div>
+
+
+window.App = React.createClass
+	render: ->
+		<div>
+			<CollaboratorList doc={this.props.doc}/>
+			<Editor doc={this.props.richtext}/>
+		</div>
+
 
 window.Editor = React.createClass
 	getInitialState: ->
@@ -21,7 +42,7 @@ window.Editor = React.createClass
 		return simple_elements[attribute]
 
 	renderTextNode: (text, index) ->
-		React.createElement 'span', 
+		React.createElement 'span',
 			'data-start-index': index
 		, text
 
@@ -89,7 +110,7 @@ window.Editor = React.createClass
 			@deleteSelection()
 		else
 			@props.doc.deleteText @state.cursor - 1, 1
-			@setState cursor: @state.cursor - 1 
+			@setState cursor: @state.cursor - 1
 
 	getText: ->
 		@props.doc.getText()
@@ -110,7 +131,7 @@ window.Editor = React.createClass
 		else if event.keyCode is KEYCODES.left
 			if event.shiftKey
 				if not @state.selection_end
-					@setState selection_end: @state.cursor					
+					@setState selection_end: @state.cursor
 				if @state.cursor > 0
 					@setState cursor: @state.cursor - 1
 			else
@@ -218,7 +239,7 @@ window.gapi.load 'auth:client,drive-realtime,drive-share', ->
 	richtext.formatText 5, 3, {italic: true}
 
 	render = ->
-		React.render <Editor doc={richtext}/>, document.getElementById('main')
+		React.render <App richtext={richtext} doc={doc}/>, document.getElementById('main')
 
 	parent.addEventListener gapi.drive.realtime.EventType.OBJECT_CHANGED, render
 
